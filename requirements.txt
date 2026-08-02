@@ -1,0 +1,48 @@
+# ============================================
+# 企业级文档知识库问答系统 - 依赖包
+# ============================================
+
+# 核心框架
+langchain>=0.2.0
+langchain-openai>=0.1.0
+langchain-community>=0.2.0
+
+# 向量数据库
+chromadb>=0.5.0
+
+# 文档解析
+pypdf>=4.0.0
+python-docx>=1.1.0
+python-pptx>=0.6.23
+pandas>=2.0.0
+openpyxl>=3.1.0
+beautifulsoup4>=4.12.0
+markdown>=3.5
+
+# 检索相关
+rank-bm25>=0.2.2
+jieba>=0.42.1
+
+# 重排模型（可选）
+# FlagEmbedding>=1.2.0
+# cohere>=5.0.0
+
+# 前端
+streamlit>=1.32.0
+
+# 配置
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
+# 工具
+loguru>=0.7.0
+tqdm>=4.66.0
+
+# 测试
+pytest>=8.0.0
+pytest-cov>=4.1.0
+
+# 其他
+numpy>=1.24.0
+tiktoken>=0.6.0
