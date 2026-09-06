@@ -7,7 +7,7 @@ Prompt Template Module - Well-designed Q&A Prompt System
     准确回答用户问题，有效减少幻觉，提升回答质量。
 
 技术选型：
-    - LangChain PromptTemplate：结构化 Prompt 管理
+    - LangChain ChatPromptTemplate：结构化 Prompt 管理
     - 多轮对话 Prompt：支持上下文历史
     - 引用标注 Prompt：引导模型标注引用来源
 
@@ -17,10 +17,14 @@ Prompt Template Module - Well-designed Q&A Prompt System
     3. 引用标注：要求标注引用来源，便于验证
     4. 思维链：引导模型先分析再回答
     5. 格式规范：统一输出格式，便于解析
+
+重要注意：
+    ChatPromptTemplate.from_messages 中必须使用元组形式 ("system", content)，
+    不能使用 SystemMessage(content=...) 对象，否则 content 中的 {context} 等
+    占位符不会被替换，导致模型收到原始模板字符串而困惑。
 """
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 
 
 # =============================================================================
@@ -159,9 +163,11 @@ class PromptFactory:
         Returns:
             ChatPromptTemplate 实例
         """
+        # 重要：必须使用元组形式 ("system", content)，不能用 SystemMessage 对象
+        # 否则 content 中的 {context} 占位符不会被替换
         return ChatPromptTemplate.from_messages([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content="{question}"),
+            ("system", SYSTEM_PROMPT),
+            ("human", "{question}"),
         ])
 
     @staticmethod
@@ -173,9 +179,9 @@ class PromptFactory:
             ChatPromptTemplate 实例
         """
         return ChatPromptTemplate.from_messages([
-            SystemMessage(content=MULTI_TURN_SYSTEM_PROMPT),
-            MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessage(content="{question}"),
+            ("system", MULTI_TURN_SYSTEM_PROMPT),
+            ("placeholder", "{chat_history}"),
+            ("human", "{question}"),
         ])
 
     @staticmethod

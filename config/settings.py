@@ -14,13 +14,17 @@ Enterprise Document Knowledge Base Q&A System - Global Configuration
 from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# 优先加载 .env 文件到环境变量（确保嵌套配置能正确读取）
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=False)
+
 
 class OpenAIConfig(BaseSettings):
-    """OpenAI API 配置"""
-    api_key: str = Field(default="", description="OpenAI API 密钥")
+    """OpenAI API 配置（兼容智谱 AI 等 OpenAI 格式接口）"""
+    api_key: str = Field(default="", description="API 密钥")
     base_url: str = Field(default="https://api.openai.com/v1", description="API 基础 URL")
     model: str = Field(default="gpt-4o", description="对话模型名称")
     embedding_model: str = Field(
@@ -122,7 +126,6 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
-        nested_delimiter="_",
     )
 
     @property

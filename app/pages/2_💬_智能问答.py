@@ -82,21 +82,6 @@ st.markdown("""
         background: #e8ecff;
         border-left: 3px solid #667eea;
     }
-    .thinking-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #667eea;
-        margin: 0 2px;
-        animation: bounce 1.4s infinite ease-in-out both;
-    }
-    .thinking-indicator:nth-child(1) { animation-delay: -0.32s; }
-    .thinking-indicator:nth-child(2) { animation-delay: -0.16s; }
-    @keyframes bounce {
-        0%, 80%, 100% { transform: scale(0); }
-        40% { transform: scale(1); }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -292,17 +277,17 @@ def main():
     cols = st.columns(len(quick_questions))
     for i, q in enumerate(quick_questions):
         with cols[i]:
-            if st.button(q, use_container_width=True):
-                st.session_state.quick_question = q
+            if st.button(q, use_container_width=True, key=f"quick_{i}"):
+                st.session_state.pending_question = q
                 st.rerun()
 
     # 文本输入
     user_input = st.chat_input("输入您的问题...", key="chat_input")
 
-    # 处理快捷问题
-    if "quick_question" in st.session_state and st.session_state.quick_question:
-        user_input = st.session_state.quick_question
-        st.session_state.quick_question = None
+    # 处理待处理的问题（快捷问题或输入的问题）
+    pending_question = st.session_state.pop("pending_question", None)
+    if pending_question:
+        user_input = pending_question
 
     if user_input:
         # 添加用户消息
@@ -321,26 +306,50 @@ def main():
         # 生成回答
         with chat_container:
             with st.chat_message("assistant"):
+                # 阶段1：检索中
+                status_placeholder = st.empty()
+                status_placeholder.info("🔍 正在检索相关文档...")
                 message_placeholder = st.empty()
                 full_response = ""
                 sources = []
+                final_response = None
 
                 try:
+                    import time
+                    start_time = time.time()
+
                     # 流式生成
-                    for chunk, final_response in pipeline.ask_stream(
+                    chunk_count = 0
+                    for chunk, final_resp in pipeline.ask_stream(
                         question=user_input,
                         session_id=session_id,
                     ):
-                        if final_response is not None:
+                        # 第一个 chunk 到达时，切换状态为生成中
+                        if chunk_count == 0 and chunk:
+                            status_placeholder.success("✅ 检索完成，正在生成回答...")
+                            time.sleep(0.3)
+                            status_placeholder.empty()
+
+                        if final_resp is not None:
                             # 最终响应，包含引用来源
-                            sources = [s.__dict__ for s in final_response.sources]
+                            final_response = final_resp
+                            sources = [s.__dict__ for s in final_resp.sources]
                         else:
                             # 流式内容
                             full_response += chunk
-                            message_placeholder.markdown(full_response + "▌")
+                            chunk_count += 1
+                            if full_response:
+                                message_placeholder.markdown(full_response + "▌")
+
+                    # 如果没有收到任何流式 chunk（智谱可能整段返回），用最终响应
+                    if not full_response and final_response:
+                        full_response = final_response.answer
 
                     # 最终显示
                     message_placeholder.markdown(full_response)
+                    status_placeholder.empty()
+
+                    elapsed = time.time() - start_time
 
                     # 保存助手消息
                     st.session_state.chat_history[session_id].append({
@@ -348,6 +357,9 @@ def main():
                         "content": full_response,
                         "sources": sources,
                     })
+
+                    # 显示耗时
+                    st.caption(f"⏱️ 耗时: {elapsed:.1f}s | 检索到 {len(sources)} 个引用来源")
 
                     # 显示引用来源
                     if sources:
@@ -372,7 +384,8 @@ def main():
 
                 except Exception as e:
                     error_msg = f"❌ 生成回答时出错: {str(e)}"
-                    message_placeholder.error(error_msg)
+                    status_placeholder.error(error_msg)
+                    message_placeholder.empty()
                     logger.error(f"问答失败: {str(e)}")
 
                     # 保存错误消息
@@ -381,6 +394,11 @@ def main():
                         "content": error_msg,
                         "sources": [],
                     })
+
+                    # 显示详细错误信息（帮助调试）
+                    with st.expander("🔧 查看详细错误信息"):
+                        import traceback
+                        st.code(traceback.format_exc())
 
         st.rerun()
 
