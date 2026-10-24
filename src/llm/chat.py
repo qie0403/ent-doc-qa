@@ -477,6 +477,17 @@ class ChatManager:
         self.history.clear_history(session_id)
         logger.info(f"清空会话历史: {session_id}")
 
+    def clear_all_sessions(self) -> int:
+        """
+        清空全部对话历史（删除所有会话）
+
+        Returns:
+            被清空的会话数量
+        """
+        count = self.history.clear_all_sessions()
+        logger.info(f"已清空全部对话历史，共 {count} 个会话")
+        return count
+
     def get_history(self, session_id: str) -> list:
         """
         获取会话历史

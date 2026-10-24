@@ -63,7 +63,9 @@ class RetrievalConfig(BaseSettings):
     """检索配置"""
     top_k: int = Field(default=10, description="初始检索返回数量")
     rerank_top_n: int = Field(default=5, description="重排后返回数量")
-    enable_rerank: bool = Field(default=True, description="是否启用重排")
+    # 默认关闭：开启需额外安装 FlagEmbedding 并下载本地模型，
+    # 与 README / .env.example 的描述保持一致（避免新用户启动即报错）
+    enable_rerank: bool = Field(default=False, description="是否启用重排")
     rerank_model: str = Field(
         default="BAAI/bge-reranker-large",
         description="重排模型名称"

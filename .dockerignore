@@ -1,0 +1,65 @@
+# ============================================
+# Docker 构建上下文排除清单
+# 目的：防止密钥、运行时数据、缓存被打进镜像
+# 说明：Dockerfile 使用 COPY . . ，此文件决定哪些内容不进入构建上下文
+# ============================================
+
+# ---- 密钥与凭据（最高优先级，严禁入镜像）----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- 运行时数据（向量库、上传文档、索引状态）----
+data/
+
+# ---- 版本控制与 CI ----
+.git/
+.gitignore
+.github/
+
+# ---- Python 缓存与构建产物 ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ---- 虚拟环境 ----
+venv/
+env/
+.venv/
+ENV/
+
+# ---- 测试与工具缓存 ----
+.pytest_cache/
+.mypy_cache/
+.cache/
+.coverage
+htmlcov/
+
+# ---- 日志（可能含本机路径与调试信息）----
+*.log
+logs/
+scripts/screenshots/
+
+# ---- Docker 自身 ----
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# ---- IDE 与操作系统 ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 文档（镜像运行不需要）----
+docs/
+README.md
+LICENSE

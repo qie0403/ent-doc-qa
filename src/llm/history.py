@@ -310,6 +310,18 @@ class ConversationHistory:
             return True
         return False
 
+    def clear_all_sessions(self) -> int:
+        """
+        清空全部对话历史（删除所有会话）
+
+        Returns:
+            被清空的会话数量
+        """
+        count = len(self._conversations)
+        self._conversations.clear()
+        logger.info(f"已清空全部对话历史，共删除 {count} 个会话")
+        return count
+
     def list_sessions(self) -> List[Dict]:
         """
         列出所有会话

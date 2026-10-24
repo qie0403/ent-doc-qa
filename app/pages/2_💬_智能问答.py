@@ -22,7 +22,7 @@ from loguru import logger
 
 # 页面配置
 st.set_page_config(
-    page_title="智能问答 - 企业级文档知识库问答系统",
+    page_title="智能问答 - DocMind 智析",
     page_icon="💬",
     layout="wide",
 )
@@ -79,8 +79,8 @@ st.markdown("""
         background: #f0f2f5;
     }
     .session-item.active {
-        background: #e8ecff;
-        border-left: 3px solid #667eea;
+        background: #e3effb;
+        border-left: 3px solid #0d47a1;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -91,7 +91,7 @@ def check_initialization():
     if "pipeline" not in st.session_state or not st.session_state.pipeline:
         st.error("❌ 系统未初始化，请先回到首页初始化系统")
         if st.button("🏠 返回首页"):
-            st.switch_page("main.py")
+            st.switch_page("pages/home.py")
         st.stop()
 
     return st.session_state.pipeline
@@ -182,7 +182,7 @@ def main():
         st.subheader("💬 对话会话")
 
         # 新建会话按钮
-        if st.button("➕ 新建会话", type="primary", use_container_width=True):
+        if st.button("➕ 新建会话", type="primary", width='stretch'):
             session_id = pipeline.conversation_history.create_session()
             st.session_state.current_session_id = session_id
             st.session_state.chat_history[session_id] = []
@@ -215,7 +215,7 @@ def main():
                 if st.button(
                     session_title,
                     key=f"session_{session_id}",
-                    use_container_width=True,
+                    width='stretch',
                     type="secondary",
                 ):
                     st.session_state.current_session_id = session_id
@@ -224,16 +224,36 @@ def main():
         st.markdown("---")
 
         # 清空当前会话
-        if st.button("🗑️ 清空当前会话", use_container_width=True):
+        if st.button("🗑️ 清空当前会话", width='stretch'):
             current_id = get_current_session_id()
             pipeline.clear_session(current_id)
             st.session_state.chat_history[current_id] = []
             st.rerun()
 
+        # 清空全部对话历史（二次确认，防止误删）
+        if st.button("🧹 清空全部对话历史", width='stretch'):
+            st.session_state.confirm_clear_all = True
+
+        if st.session_state.get("confirm_clear_all"):
+            st.warning("⚠️ 将删除所有会话记录，此操作不可恢复，确定吗？")
+            confirm_col, cancel_col = st.columns(2)
+            with confirm_col:
+                if st.button("✅ 确定清空", key="confirm_clear_all_btn", type="primary"):
+                    cleared_count = pipeline.clear_all_sessions()
+                    st.session_state.chat_history = {}
+                    st.session_state.current_session_id = None
+                    st.session_state.confirm_clear_all = False
+                    st.toast(f"已清空全部对话历史（{cleared_count} 个会话）", icon="🧹")
+                    st.rerun()
+            with cancel_col:
+                if st.button("❌ 取消", key="cancel_clear_all_btn"):
+                    st.session_state.confirm_clear_all = False
+                    st.rerun()
+
         st.markdown("---")
 
-        if st.button("🏠 返回首页", use_container_width=True):
-            st.switch_page("main.py")
+        if st.button("🏠 返回首页", width='stretch'):
+            st.switch_page("pages/home.py")
 
     # 主聊天区域
     session_id = get_current_session_id()
@@ -277,7 +297,7 @@ def main():
     cols = st.columns(len(quick_questions))
     for i, q in enumerate(quick_questions):
         with cols[i]:
-            if st.button(q, use_container_width=True, key=f"quick_{i}"):
+            if st.button(q, width='stretch', key=f"quick_{i}"):
                 st.session_state.pending_question = q
                 st.rerun()
 

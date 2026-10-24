@@ -1,49 +1,51 @@
-# 📚 企业级文档知识库问答系统
+# 🧠 DocMind 智析 · 企业级文档知识库问答系统
 
-> 基于 RAG（检索增强生成）技术的智能文档问答平台
+> 基于 RAG（检索增强生成）的企业文档智能问答平台：上传 PDF / Word / PPT / Excel 等文档，用自然语言提问，AI 基于知识库内容作答并标注引用来源，有效减少大模型幻觉。
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/qie0403/ent-doc-qa/actions/workflows/ci.yml/badge.svg)](https://github.com/qie0403/ent-doc-qa/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.10~3.13-blue.svg)](https://www.python.org/)
 [![LangChain](https://img.shields.io/badge/LangChain-0.2+-green.svg)](https://python.langchain.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red.svg)](https://streamlit.io/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-0.5+-purple.svg)](https://www.trychroma.com/)
+[![LLM](https://img.shields.io/badge/LLM-OpenAI兼容（实测Qwen3.8）-0097a7.svg)](https://dashscope.aliyun.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+适合：企业内部知识库问答、文档检索问答场景搭建，以及 RAG 工程化（分块、混合检索、幻觉抑制、多轮对话）的学习与演示。
+
+## 🖼️ 功能截图
+
+> 截图文件位于 `docs/images/`（截图清单与命名见该目录下的说明文件）。
+
+| 首页仪表盘 | 文档管理 |
+|---|---|
+| ![首页](docs/images/01_home_dashboard.png) | ![文档管理](docs/images/02_document_management.png) |
+| **智能问答（带来源引用）** | **系统设置** |
+| ![智能问答](docs/images/03_qa_chat.png) | ![系统设置](docs/images/04_system_settings.png) |
+
+系统设置子页面：
+
+| 模型配置 | 检索参数 |
+|---|---|
+| ![模型配置](docs/images/06_settings_model_config.png) | ![检索参数](docs/images/07_settings_retrieval_params.png) |
+| **对话参数** | **系统日志** |
+| ![对话参数](docs/images/08_settings_chat_params.png) | ![系统日志](docs/images/09_settings_system_logs.png) |
+
+清空全部对话历史（二次确认防误删）：
+
+![清空历史确认](docs/images/05_clear_history.png)
 
 ## ✨ 核心功能
 
-### 📁 多格式文档支持
-- 支持 **PDF、Word、PPT、Excel、CSV、TXT、Markdown、HTML** 等多种格式
-- 批量上传，自动解析
-- 智能分块，保留语义完整性
+- **📁 多格式文档支持**：PDF、Word、PPT、Excel、CSV、TXT、Markdown、HTML，批量上传、自动解析、智能分块
+- **🔍 混合检索**：向量检索（语义匹配）+ BM25 关键词检索（jieba 中文分词）双通道加权融合，兼顾语义与专有名词
+- **🎯 Rerank 精排（可选）**：支持 BGE-Reranker / Cohere 交叉编码器重排；默认关闭，可一键开启
+- **💬 多轮对话问答**：上下文问题改写、流式输出、引用来源标注（文件名/页码/相关度/片段）
+- **🧹 对话管理**：多会话切换、新建会话、清空当前会话、清空全部对话历史（二次确认防误删）
+- **⚡ 增量更新**：基于文件哈希检测变化，只处理新增/修改的文档，避免重复索引
+- **🛡️ 幻觉抑制**：严格 Prompt 约束、基于检索引用作答、低温度生成（temperature=0.1）
+- **🖥️ 可视化界面**：Streamlit 三页面（文档管理 / 智能问答 / 系统设置），开箱即用
 
-### 🔍 混合检索 + Rerank
-- **向量检索**：语义相似度匹配，擅长同义、模糊查询
-- **BM25 检索**：关键词精确匹配，擅长专有名词、术语
-- **Rerank 精排**：交叉编码器重排序，大幅提升准确率
-- 加权融合，双通道互补
-
-### 💬 多轮对话问答
-- 多轮对话，上下文理解
-- 流式输出，实时响应
-- 引用来源标注，有据可依
-- 历史对话管理
-
-### ⚡ 增量更新
-- 基于文件哈希的变化检测
-- 只处理新增/修改的文档
-- 更新效率提升 10 倍以上
-
-### 🎯 幻觉抑制
-- 严格的 Prompt 约束
-- 引用验证机制
-- 答案置信度评估
-- 幻觉率 ≤ 5%
-
-### 🖥️ 可视化界面
-- 基于 Streamlit 的友好界面
-- 文档管理、对话问答、系统设置
-- 实时状态监控
-
-## 🏗️ 技术架构
+## 🏗️ 技术架构与技术栈
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -55,7 +57,6 @@
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
 │                     问答流水线 (QAPipeline)                  │
-│                                                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
 │  │ 文档处理模块  │  │  检索模块   │  │    LLM 问答模块     │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘ │
@@ -65,37 +66,37 @@
 │                      数据存储层                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │ ChromaDB     │  │  BM25 索引   │  │  元数据 JSON      │  │
-│  │ 向量数据库   │  │              │  │                  │  │
 │  └──────────────┘  └──────────────┘  └──────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**技术栈：**
-- **前端**：Streamlit
-- **后端**：Python + LangChain
-- **向量数据库**：ChromaDB
-- **嵌入模型**：OpenAI / BGE
-- **LLM**：OpenAI GPT-4o
-- **检索**：BM25 + 向量 + Rerank
-- **重排**：BGE-Reranker / Cohere
+| 层级 | 选型 | 说明 |
+|------|------|------|
+| 前端 | Streamlit | 三页面可视化界面 |
+| 编排框架 | LangChain | 文档加载、文本分块、链编排 |
+| 向量数据库 | ChromaDB | 本地持久化，零外部服务依赖 |
+| 大模型 | 任意 OpenAI 兼容接口（已实测 `qwen3.8-flash`，可切换智谱 GLM、OpenAI 等） | 支持流式输出与推理模型 |
+| 嵌入模型 | 与大模型同服务商的 OpenAI 兼容嵌入（已实测 `qwen3.7-text-embedding-flash`，1024 维） | 切换服务商后必须重建索引 |
+| 混合检索 | jieba + BM25 + 向量加权 | 默认 BM25 权重 0.4 / 向量权重 0.6 |
+| 重排（可选） | BGE-Reranker / Cohere | 默认关闭，需额外安装模型依赖 |
+| 配置 | Pydantic Settings + `.env` | 类型安全，一处配置全局生效 |
 
 ## 🚀 快速开始
 
 ### 环境要求
 
-- Python 3.10+
-- OpenAI API 密钥
+- Python 3.10+（已在 3.10 / 3.13 上验证）
+- 一个 OpenAI 兼容的 API Key（已实测阿里云百炼 MaaS 的 Qwen 系列，智谱、OpenAI 等也可）
+- ⚠️ **聊天模型与嵌入模型必须来自同一服务商**（同一个 `OPENAI_BASE_URL`），切换服务商后必须重建索引
 
-### 安装步骤
-
-#### 1. 克隆项目
+### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/enterprise-doc-qa.git
-cd enterprise-doc-qa
+git clone https://github.com/qie0403/ent-doc-qa.git
+cd ent-doc-qa
 ```
 
-#### 2. 创建虚拟环境
+### 2. 创建虚拟环境
 
 ```bash
 # Windows
@@ -107,214 +108,189 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-#### 3. 安装依赖
+### 3. 安装依赖
 
 ```bash
+# 方式一：允许较新版本（日常开发）
 pip install -r requirements.txt
+
+# 方式二：精确复现已验证环境（推荐用于部署 / CI）
+pip install -r requirements.lock.txt
 ```
 
-#### 4. 配置环境变量
+> `requirements.lock.txt` 由 `python scripts/gen_lock.py` 离线生成，记录了直接依赖的完整传递闭包与精确版本；升级依赖后重跑该命令即可更新。
+
+### 4. 配置环境变量
 
 ```bash
-# 复制配置文件
-copy .env.example .env  # Windows
-cp .env.example .env    # macOS/Linux
+# Windows
+copy .env.example .env
+# macOS/Linux
+cp .env.example .env
 ```
 
-编辑 `.env` 文件，填入你的配置：
+编辑 `.env`，填入你使用的服务商配置（以下为已实测的阿里云百炼 MaaS）：
 
 ```env
-# OpenAI 配置（必填）
-OPENAI_API_KEY=sk-your-api-key-here
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-
-# 向量数据库配置
-CHROMA_PERSIST_DIR=./data/chroma_db
-CHROMA_COLLECTION_NAME=enterprise_docs
-
-# 检索配置
-TOP_K=10
-RERANK_TOP_N=5
-ENABLE_RERANK=true
+# 阿里云百炼 MaaS（OpenAI 兼容接口）
+OPENAI_API_KEY=your-api-key-here
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+OPENAI_MODEL=qwen3.8-flash
+OPENAI_EMBEDDING_MODEL=qwen3.7-text-embedding-flash
+MAX_TOKENS=4096
 ```
 
-#### 5. 启动应用
+> 注意：
+> 1. 聊天模型与嵌入模型必须属于同一服务商；嵌入模型不能跨平台混用。
+> 2. 更换嵌入模型后，旧向量库中的向量与新模型不兼容，必须执行 `python scripts/reindex.py` 全量重建索引。
+> 3. qwen3 等推理模型会先输出思考过程，思考 token 也计入 `MAX_TOKENS`，建议设为 4096 及以上。
+>
+> 其他服务商（智谱、OpenAI 等）的配置见 `.env.example` 中的注释模板。
+
+> 若使用 OpenAI 官方接口，将四项分别改为 `sk-` 开头的 Key、`https://api.openai.com/v1`、`gpt-4o`、`text-embedding-3-small`。
+> 完整参数（分块大小、检索权重、重排开关等）见 `.env.example` 中的注释。
+
+### 5. 启动应用
 
 ```bash
+# 方式一：命令行
 streamlit run app/main.py
+
+# 方式二：Windows 一键启动
+双击 run.bat
 ```
 
-浏览器会自动打开 `http://localhost:8501`
+浏览器打开 `http://localhost:8501`，**首次进入先在首页点击「🔧 初始化系统」**，然后到「文档管理」页上传文档即可开始问答。
 
-### Docker 部署（可选）
+### 6. 运行测试（可选）
 
 ```bash
-# 构建镜像
-docker build -t enterprise-doc-qa .
+pytest tests/ -v
+```
 
-# 运行容器
-docker run -p 8501:8501 \
-  -e OPENAI_API_KEY=your-api-key \
-  -v $(pwd)/data:/app/data \
-  enterprise-doc-qa
+### 🐳 Docker 部署（可选）
+
+```bash
+# 方式一：docker compose（推荐，自动挂载 .env 与 data 目录）
+docker compose up -d --build
+
+# 方式二：手动构建运行
+docker build -t ent-doc-qa .
+docker run -p 8501:8501 --env-file .env -v ${PWD}/data:/app/data ent-doc-qa
 ```
 
 ## 📖 使用指南
 
-### 1. 上传文档
+1. **上传文档**：进入「文档管理」→ 上传文件 → 等待解析与索引 → 查看分块结果
+2. **智能问答**：进入「智能问答」→ 输入问题 → 查看流式回答与引用来源，支持多轮追问与多会话管理
+3. **系统设置**：查看系统状态、调整检索参数（top_k、混合权重、Rerank 开关）
 
-1. 进入「文档管理」页面
-2. 拖拽或选择文件上传
-3. 等待系统自动解析和索引
-4. 查看处理结果
+## 📊 参数调优实测（分块大小 256 vs 512）
 
-### 2. 智能问答
+小语料上发现 256 分块会把完整知识点切碎（例如一个策略被拆到两个块），导致检索首条命中不理想。为此编写了可复现的评测脚本，用同一套分块器与 BM25 检索器（jieba 中文分词，与生产一致）做 A/B 对比。评测语料为入库的 `sample_data/`（新克隆仓库即可直接复现，无需先建向量库）：
 
-1. 进入「智能问答」页面
-2. 在输入框中输入问题
-3. 查看 AI 回答和引用来源
-4. 支持多轮对话
+```bash
+# 一键复现评测（自动读取 sample_data/ 示例语料）
+python scripts/ab_chunk_size.py
 
-### 3. 系统设置
+# 按指定分块大小全量重建索引（data/documents 为空时自动从 sample_data/ 复制示例语料）
+$env:CHUNK_SIZE="256"; python scripts/reindex.py   # PowerShell
+$env:CHUNK_SIZE="512"; python scripts/reindex.py
+```
 
-1. 进入「系统设置」页面
-2. 查看系统状态
-3. 调整检索参数
-4. 查看系统日志
+10 个固定测试问题的实测结果：
+
+| 指标 | chunk_size=256 | chunk_size=512 |
+|------|----------------|----------------|
+| 分块数 | 6 | 3 |
+| 平均块长（字符） | 200.2 | 409.3 |
+| **Recall@1** | 60.0% | **100.0%** |
+| Recall@3 | 100.0% | 100.0% |
+| **MRR** | 0.783 | **1.000** |
+
+结论：512 分块语义更完整，Recall@1 提升 40 个百分点、MRR 提升至 1.000，因此生产配置采用 512。该结论基于 2 篇短文、10 个问题的演示集，大规模语料建议用同一脚本重新评测。
 
 ## 📁 项目结构
 
 ```
-enterprise-doc-qa/
-├── README.md                    # 项目说明
-├── requirements.txt             # 依赖包
-├── .env.example                 # 环境变量示例
-├── .gitignore                   # Git 忽略文件
-├── config/                      # 配置模块
-│   ├── __init__.py
-│   └── settings.py              # 全局配置
-├── src/                         # 核心源码
-│   ├── __init__.py
-│   ├── document_processor/      # 文档处理模块
-│   │   ├── __init__.py
-│   │   ├── parser.py            # 多格式文档解析
-│   │   ├── chunker.py           # 智能分块
-│   │   └── incremental.py       # 增量更新
-│   ├── vector_store/            # 向量存储模块
-│   │   ├── __init__.py
-│   │   ├── embedding.py         # 嵌入模型
-│   │   └── chroma_store.py      # ChromaDB 封装
-│   ├── retriever/               # 检索模块
-│   │   ├── __init__.py
-│   │   ├── bm25.py              # BM25 检索
-│   │   ├── reranker.py          # Rerank 重排
-│   │   └── hybrid.py            # 混合检索
-│   ├── llm/                     # LLM 问答模块
-│   │   ├── __init__.py
-│   │   ├── prompt.py            # Prompt 模板
-│   │   ├── history.py           # 对话历史管理
-│   │   └── chat.py              # 对话管理器
-│   └── pipeline/                # 问答流水线
-│       ├── __init__.py
-│       └── qa_pipeline.py       # 系统核心入口
+ent-doc-qa/
 ├── app/                         # Streamlit 应用
-│   ├── __init__.py
-│   ├── main.py                  # 主应用入口
-│   ├── pages/                   # 页面
-│   │   ├── 1_📚_文档管理.py
-│   │   ├── 2_💬_智能问答.py
-│   │   └── 3_⚙️_系统设置.py
-│   └── components/              # UI 组件
-├── tests/                       # 测试
-│   ├── __init__.py
-│   └── test_pipeline.py
-├── docs/                        # 文档
+│   ├── main.py                  # 应用入口（st.navigation 挂载导航，启动文件）
+│   └── pages/                   # 首页 / 文档管理 / 智能问答 / 系统设置
+├── config/
+│   └── settings.py              # 全局配置（Pydantic Settings）
+├── src/
+│   ├── document_processor/      # 解析、智能分块、增量更新
+│   ├── vector_store/            # 嵌入模型、ChromaDB 封装
+│   ├── retriever/               # BM25、混合检索、Rerank
+│   ├── llm/                     # Prompt、对话历史、对话管理
+│   └── pipeline/qa_pipeline.py  # 系统核心编排入口
+├── scripts/
+│   ├── ab_chunk_size.py         # 分块大小 A/B 评测脚本
+│   ├── reindex.py               # 按当前 CHUNK_SIZE 全量重建索引
+│   ├── restore_corpus.py        # 从向量库还原语料
+│   └── gen_lock.py              # 生成 requirements.lock.txt（离线解析依赖树）
+├── tests/                       # pytest 测试
+├── sample_data/                 # 入库示例语料（评测与重建索引的可复现数据源）
+├── docs/
 │   ├── ARCHITECTURE.md          # 技术架构文档
-│   └── OPTIMIZATION.md          # 优化策略文档
-└── data/                        # 数据目录
-    ├── documents/               # 上传的文档
-    └── chroma_db/               # 向量数据库
+│   ├── OPTIMIZATION.md          # 优化策略文档
+│   └── images/                  # README 功能截图
+├── data/                        # 文档与向量库（运行时数据，不入库）
+├── .github/workflows/ci.yml     # GitHub Actions CI（push/PR 自动跑测试）
+├── .env.example                 # 环境变量模板
+├── requirements.txt             # 直接依赖（版本下界）
+├── requirements.lock.txt        # 依赖锁定（传递闭包，精确版本）
+├── Dockerfile / docker-compose.yml / .dockerignore
+├── run.bat                      # Windows 一键启动
+└── LICENSE
 ```
 
 ## 🎯 性能指标
 
-| 指标 | 目标值 | 说明 |
-|------|--------|------|
-| 问答准确率 | ≥ 90% | 回答正确的比例 |
-| 幻觉率 | ≤ 5% | 编造内容的比例 |
-| 检索召回率 | ≥ 90% | 相关文档被检索到的比例 |
-| Top-5 准确率 | ≥ 95% | 前 5 个结果包含正确答案 |
-| 引用准确率 | ≥ 95% | 引用来源正确的比例 |
-| 首 token 延迟 | ~500ms | 流式输出首字延迟 |
-| 检索延迟 | ~300ms | 端到端检索耗时 |
+**已实测（演示语料）：**
+- 512 分块下 Recall@1 = 100%、MRR = 1.000（评测集 10 个问题，见上表）
+- 端到端问答（含检索 + 推理模型流式生成，含思考过程）约 5–15s（视模型与问题复杂度）
 
-## 🔧 核心优化
+**设计目标（大规模语料下需用自有数据验证）：**
 
-### 幻觉抑制
-- 严格的 Prompt 约束和角色设定
-- 引用来源标注机制
-- 答案验证和置信度评估
-- 低温度生成（temperature=0.1）
+| 指标 | 目标值 |
+|------|--------|
+| 问答准确率 | ≥ 90% |
+| 幻觉率 | ≤ 5% |
+| 检索召回率 | ≥ 90% |
+| Top-5 准确率 | ≥ 95% |
+| 引用准确率 | ≥ 95% |
 
-### 检索优化
-- 混合检索架构（向量 + BM25）
-- Rerank 精排提升准确率
-- 智能分块策略
-- 问题改写优化
+## 🔧 常见问题
 
-### 性能优化
-- 批量向量化处理
-- 嵌入结果缓存
-- 增量更新机制
-- 流式输出体验
+**Q：如何切换模型供应商？**
+A：修改 `.env` 中四个 `OPENAI_*` 变量即可，所有接口均为 OpenAI 兼容协议（阿里百炼、智谱、DeepSeek、本地 Ollama 等均可）。注意嵌入模型必须与 `OPENAI_BASE_URL` 同服务商，换完后执行 `python scripts/reindex.py` 重建索引。
+
+**Q：如何开启 Rerank？**
+A：安装 `FlagEmbedding`（或配置 Cohere Key），在 `.env` 中设置 `ENABLE_RERANK=true`。
+
+**Q：如何进一步提升问答准确率？**
+A：调整分块大小/重叠（可先用 `scripts/ab_chunk_size.py` 评测）、增大 `TOP_K` / `RERANK_TOP_N`、开启 Rerank、提高文档结构质量。
+
+**Q：支持完全离线部署吗？**
+A：支持。嵌入与 LLM 换成本地模型（如 BGE + Ollama），向量库使用本地 ChromaDB 即可。
 
 ## 📚 详细文档
 
-- [技术架构文档](docs/ARCHITECTURE.md) - 系统架构、模块设计、数据模型
-- [优化策略文档](docs/OPTIMIZATION.md) - 幻觉抑制、检索优化、性能优化
+- [技术架构文档](docs/ARCHITECTURE.md)：系统架构、模块设计、数据模型
+- [优化策略文档](docs/OPTIMIZATION.md)：幻觉抑制、检索优化、性能优化
 
-## 🤝 贡献指南
+## 🤝 贡献
 
-欢迎贡献代码！请遵循以下步骤：
+欢迎 Issue 与 PR：Fork → 特性分支 → 提交 → Push → Pull Request。
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+推送与 PR 会触发 GitHub Actions CI（Python 3.11 / 3.13 双版本矩阵）自动运行 `pytest`，请确保本地测试通过后再提交。
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 🙋‍♂️ 常见问题
-
-### Q: 支持哪些文档格式？
-A: 目前支持 PDF、Word (.docx)、PowerPoint (.pptx)、Excel (.xlsx)、CSV、TXT、Markdown、HTML 等格式。
-
-### Q: 如何提升问答准确率？
-A: 可以尝试以下方法：
-- 调整分块大小和重叠参数
-- 增加 top_k 和 rerank_top_n
-- 启用 Rerank 重排
-- 优化文档质量和结构
-
-### Q: 如何降低幻觉率？
-A: 可以尝试以下方法：
-- 降低 temperature 参数（0.1-0.3）
-- 增加检索结果数量
-- 加强 Prompt 约束
-- 启用答案验证
-
-### Q: 支持本地部署吗？
-A: 支持。可以使用本地嵌入模型（如 BGE）和本地 LLM（如 Ollama），完全离线运行。
-
-## 📞 联系方式
-
-如有问题或建议，欢迎提交 Issue 或 Pull Request。
+[MIT](LICENSE)
 
 ---
 
-**如果这个项目对你有帮助，请给个 ⭐ Star 支持一下！**
+**如果这个项目对你有帮助，欢迎点一个 ⭐ Star！** 问题与建议请提交到 [Issues](https://github.com/qie0403/ent-doc-qa/issues)。

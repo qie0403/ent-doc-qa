@@ -40,6 +40,12 @@ data/documents/*
 data/chroma_db/*
 !data/documents/.gitkeep
 !data/chroma_db/.gitkeep
+# 运行时索引状态（含本机绝对路径，不入库）
+data/index_metadata.json
+
+# 脚本运行产生的截图与日志（保留脚本本身）
+scripts/screenshots/*.png
+scripts/*.log
 
 # 日志
 *.log
@@ -53,6 +59,9 @@ logs/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# 截图原片（JPEG），仓库中保留转换后的 PNG 版本
+docs/images/*.jpeg
 
 # 操作系统
 .DS_Store

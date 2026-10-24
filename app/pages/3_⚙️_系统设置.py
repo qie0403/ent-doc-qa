@@ -33,7 +33,7 @@ def check_initialization():
     if "pipeline" not in st.session_state or not st.session_state.pipeline:
         st.error("❌ 系统未初始化，请先回到首页初始化系统")
         if st.button("🏠 返回首页"):
-            st.switch_page("main.py")
+            st.switch_page("pages/home.py")
         st.stop()
 
     return st.session_state.pipeline
@@ -65,8 +65,8 @@ def main():
 
         st.markdown("---")
 
-        if st.button("🏠 返回首页", use_container_width=True):
-            st.switch_page("main.py")
+        if st.button("🏠 返回首页", width='stretch'):
+            st.switch_page("pages/home.py")
 
     # 系统状态
     if menu == "📊 系统状态":
@@ -113,7 +113,7 @@ def main():
                 list(stats.type_distribution.items()),
                 columns=["文件类型", "片段数量"],
             )
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(df, width='stretch')
         else:
             st.info("暂无数据")
 

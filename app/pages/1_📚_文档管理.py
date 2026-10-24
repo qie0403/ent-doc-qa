@@ -85,7 +85,7 @@ def check_initialization():
     if "pipeline" not in st.session_state or not st.session_state.pipeline:
         st.error("❌ 系统未初始化，请先回到首页初始化系统")
         if st.button("🏠 返回首页"):
-            st.switch_page("main.py")
+            st.switch_page("pages/home.py")
         st.stop()
 
     return st.session_state.pipeline
@@ -138,8 +138,8 @@ def main():
 
         st.markdown("---")
 
-        if st.button("🏠 返回首页", use_container_width=True):
-            st.switch_page("main.py")
+        if st.button("🏠 返回首页", width='stretch'):
+            st.switch_page("pages/home.py")
 
     # 主内容区
     tab1, tab2, tab3 = st.tabs(["📤 上传文档", "📂 已索引文档", "⚡ 批量操作"])
@@ -179,7 +179,7 @@ def main():
                 )
 
             # 上传按钮
-            if st.button("🚀 开始上传并索引", type="primary", use_container_width=True):
+            if st.button("🚀 开始上传并索引", type="primary", width='stretch'):
                 progress_bar = st.progress(0)
                 status_text = st.empty()
 

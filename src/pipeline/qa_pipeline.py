@@ -531,6 +531,17 @@ class QAPipeline:
         """清空指定会话的历史"""
         self.chat_manager.clear_history(session_id)
 
+    def clear_all_sessions(self) -> int:
+        """
+        清空全部对话历史（删除所有会话）
+
+        Returns:
+            被清空的会话数量
+        """
+        count = self.chat_manager.clear_all_sessions()
+        self._update_stats()
+        return count
+
     def health_check(self) -> Dict[str, Any]:
         """
         健康检查

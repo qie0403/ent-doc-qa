@@ -85,6 +85,10 @@ class EmbeddingManager:
 
         kwargs = {
             "model": self.model_name,
+            # 关闭 tiktoken 上下文长度校验：该校验会把文本转成 token 整数数组发送，
+            # 兼容 OpenAI 协议的第三方平台（如阿里百炼 MaaS）要求 input 为字符串数组，
+            # 不关闭会报 400 "input must be an array of strings"
+            "check_embedding_ctx_length": False,
         }
 
         if api_key:

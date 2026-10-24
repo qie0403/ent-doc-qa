@@ -1,0 +1,14 @@
+services:
+  ent-doc-qa:
+    build: .
+    container_name: enterprise-doc-qa
+    restart: always
+    ports:
+      - "8501:8501"
+    volumes:
+      # 挂载环境变量文件，安全不泄露密钥
+      - ./.env:/app/.env
+      # 挂载数据目录，持久化向量数据库和上传的文档
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
