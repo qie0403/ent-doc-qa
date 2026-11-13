@@ -78,6 +78,19 @@ class RetrievalConfig(BaseSettings):
         default=0.4,
         description="混合检索中 BM25 检索权重"
     )
+    # 拒答策略：Top1 检索分数低于该值时直接拒答，不调用大模型。
+    # 默认 0.0 表示"只在检索为空时拒答"，不改变既有问答行为；
+    # 想让系统更保守可调高（BM25 分数无上界，需按实际分布标定，不要凭猜）。
+    answer_min_score: float = Field(
+        default=0.0,
+        description="拒答阈值（Top1 分数低于此值则不生成回答）"
+    )
+    # 引用校验：生成后额外调用一次模型检查答案是否被材料支持。
+    # 每次问答多一次模型调用，故默认关闭。
+    enable_citation_check: bool = Field(
+        default=False,
+        description="是否启用生成后的引用/幻觉校验"
+    )
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 

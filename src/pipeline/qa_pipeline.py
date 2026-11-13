@@ -165,6 +165,8 @@ class QAPipeline:
             enable_streaming=settings.chat.stream_output,
             enable_query_rewrite=True,
             max_history_turns=settings.chat.max_history_turns,
+            answer_min_score=settings.retrieval.answer_min_score,
+            enable_citation_check=settings.retrieval.enable_citation_check,
         )
 
     def _init_llm(self) -> None:

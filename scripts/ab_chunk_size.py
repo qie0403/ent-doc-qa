@@ -7,21 +7,28 @@
     为"分块参数调优"提供可量化的实测数据（面试可直接引用）。
 
 实验方法：
-    1. 读取评测语料：优先使用入库的 sample_data/ 示例语料（新克隆仓库即可复现），
-       若该目录缺失则回退为从当前 ChromaDB 中导出已索引语料并按文件还原全文（去重叠）；
+    1. 读取评测语料：优先使用 eval_data/（20 篇评测文档 + 40 道人工标注问题，
+       可完整复现），其次 sample_data/ 演示语料，最后回退为从当前 ChromaDB
+       中导出已索引语料并按文件还原全文（去重叠）；
     2. 分别用项目自带的 DocumentChunker（递归字符分块，分隔符与生产一致）
        按 256/32 与 512/64 两种参数重新分块（重叠均为 12.5%，与默认配置一致）；
     3. 分别构建项目自带的 BM25Retriever 索引（jieba 中文分词，与生产一致）；
-    4. 用固定的 10 个问题测试集检索，统计：
+    4. 用固定问题集检索，统计：
        - 分块数 / 平均块长 / 最大块长
        - Recall@1、Recall@3（命中 = top-k 中出现正确文件且块内含答案关键词）
        - MRR（平均倒数排名）
        - 平均 Top1 BM25 分数
 
+口径说明（必须与数字一起说）：
+    - 只跑了 BM25 单通道，未跑向量与混合检索；
+    - 评测集为 40 题、20 篇文档，标注方式为"正确文件 + 答案关键词同时命中"；
+    - 该实验只用于比较分块参数，不代表大规模真实语料上的绝对效果。
+
 运行方式：
     python scripts/ab_chunk_size.py
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -35,7 +42,11 @@ from src.document_processor.chunker import DocumentChunker
 from src.retriever.bm25 import BM25Retriever
 
 
-# 入库的示例评测语料目录（保证新克隆仓库无需已有向量库即可复现本实验）
+# 评测语料目录（20 篇文档 + 40 道标注问题，保证新克隆仓库即可复现）
+EVAL_DATA_DIR = PROJECT_ROOT / "eval_data"
+EVAL_QUESTIONS_FILE = EVAL_DATA_DIR / "questions.json"
+
+# 演示语料目录（Streamlit 演示用的极小语料，仅用于快速冒烟）
 SAMPLE_DATA_DIR = PROJECT_ROOT / "sample_data"
 
 
@@ -43,10 +54,10 @@ SAMPLE_DATA_DIR = PROJECT_ROOT / "sample_data"
 # 1. 读取评测语料
 # ---------------------------------------------------------------------------
 
-def load_corpus_from_sample_data():
-    """从入库的 sample_data/ 读取语料全文（推荐来源：可复现、不依赖运行时数据）"""
+def load_corpus_from_dir(directory: Path):
+    """从指定目录读取全部 .txt 语料"""
     corpus = {}
-    for path in sorted(SAMPLE_DATA_DIR.glob("*.txt")):
+    for path in sorted(directory.glob("*.txt")):
         corpus[path.name] = path.read_text(encoding="utf-8")
     return corpus
 
@@ -89,14 +100,33 @@ def load_corpus_from_chroma():
 
 
 def load_corpus():
-    """加载评测语料：优先 sample_data/（可复现），缺失时回退 ChromaDB"""
-    if SAMPLE_DATA_DIR.is_dir():
-        corpus = load_corpus_from_sample_data()
+    """加载评测语料：优先 eval_data/，其次 sample_data/，最后回退 ChromaDB"""
+    if EVAL_DATA_DIR.is_dir():
+        corpus = load_corpus_from_dir(EVAL_DATA_DIR)
         if corpus:
-            print(f"[语料来源] sample_data/ 入库示例语料（{len(corpus)} 个文件）")
+            print(f"[语料来源] eval_data/ 评测语料（{len(corpus)} 个文件）")
+            return corpus
+    if SAMPLE_DATA_DIR.is_dir():
+        corpus = load_corpus_from_dir(SAMPLE_DATA_DIR)
+        if corpus:
+            print(f"[语料来源] sample_data/ 演示语料（{len(corpus)} 个文件，仅冒烟用）")
             return corpus
     print("[语料来源] ChromaDB 已索引语料（还原全文）")
     return load_corpus_from_chroma()
+
+
+def load_questions():
+    """加载标注问题集：优先 eval_data/questions.json，缺失时用内置 10 问"""
+    if EVAL_QUESTIONS_FILE.exists():
+        raw = json.loads(EVAL_QUESTIONS_FILE.read_text(encoding="utf-8"))
+        questions = [
+            (item["question"], item["expected_file"], item["keyword"])
+            for item in raw
+        ]
+        print(f"[问题来源] eval_data/questions.json（{len(questions)} 道）")
+        return questions
+    print(f"[问题来源] 内置问题集（{len(TEST_QUESTIONS)} 道）")
+    return TEST_QUESTIONS
 
 
 # ---------------------------------------------------------------------------
@@ -122,8 +152,9 @@ TEST_QUESTIONS = [
 # 3. 单组实验
 # ---------------------------------------------------------------------------
 
-def run_experiment(corpus, chunk_size, chunk_overlap):
+def run_experiment(corpus, chunk_size, chunk_overlap, questions=None):
     """对给定分块参数执行一次完整实验，返回统计指标"""
+    questions = questions or TEST_QUESTIONS
     # 3.1 分块
     chunker = DocumentChunker(
         chunk_size=chunk_size,
@@ -149,7 +180,7 @@ def run_experiment(corpus, chunk_size, chunk_overlap):
     top1_scores = []
 
     per_question = []
-    for question, expected_file, keyword in TEST_QUESTIONS:
+    for question, expected_file, keyword in questions:
         results = retriever.search(question, top_k=10)
         top1_scores.append(results[0].score if results else 0.0)
 
@@ -175,7 +206,7 @@ def run_experiment(corpus, chunk_size, chunk_overlap):
             "hit_rank": hit_rank if hit_rank is not None else "未命中",
         })
 
-    n = len(TEST_QUESTIONS)
+    n = len(questions)
     metrics = {
         "chunk_size": chunk_size,
         "chunk_overlap": chunk_overlap,
@@ -198,16 +229,17 @@ def run_experiment(corpus, chunk_size, chunk_overlap):
 
 def main():
     corpus = load_corpus()
+    questions = load_questions()
     print("=" * 70)
     print("分块大小 A/B 实验：256 vs 512（重叠比例均为 12.5%）")
     print("=" * 70)
     for name, text in corpus.items():
         print(f"语料文件: {name} | 还原后全文字符数: {len(text)}")
-    print(f"测试问题数: {len(TEST_QUESTIONS)}")
+    print(f"测试问题数: {len(questions)}")
     print()
 
-    result_256 = run_experiment(corpus, chunk_size=256, chunk_overlap=32)
-    result_512 = run_experiment(corpus, chunk_size=512, chunk_overlap=64)
+    result_256 = run_experiment(corpus, chunk_size=256, chunk_overlap=32, questions=questions)
+    result_512 = run_experiment(corpus, chunk_size=512, chunk_overlap=64, questions=questions)
 
     def fmt_row(r):
         return (

@@ -1,0 +1,202 @@
+[
+  {
+    "question": "检索增强生成主要解决大模型的什么问题？",
+    "expected_file": "01_RAG基础概念.txt",
+    "keyword": "参数知识有截止时间"
+  },
+  {
+    "question": "一个完整的 RAG 闭环通常包含哪四个环节？",
+    "expected_file": "01_RAG基础概念.txt",
+    "keyword": "四个环节"
+  },
+  {
+    "question": "向量检索常用的相似度度量有哪三种？",
+    "expected_file": "02_向量检索原理.txt",
+    "keyword": "余弦相似度"
+  },
+  {
+    "question": "为什么同一知识库里所有向量必须来自同一个嵌入模型？",
+    "expected_file": "02_向量检索原理.txt",
+    "keyword": "完全失真"
+  },
+  {
+    "question": "BM25 的两个核心经验参数分别控制什么？",
+    "expected_file": "03_BM25算法.txt",
+    "keyword": "词频饱和参数"
+  },
+  {
+    "question": "BM25 相比 TF-IDF 的关键改进是什么？",
+    "expected_file": "03_BM25算法.txt",
+    "keyword": "词频饱和"
+  },
+  {
+    "question": "块与块之间为什么要保留重叠？",
+    "expected_file": "04_分块策略.txt",
+    "keyword": "避免答案正好被切在边界"
+  },
+  {
+    "question": "判断一个块切得是否合理，有什么实用检查方法？",
+    "expected_file": "04_分块策略.txt",
+    "keyword": "单独拿出来是否能读懂"
+  },
+  {
+    "question": "嵌入模型选型要看哪四件事？",
+    "expected_file": "05_嵌入模型选型.txt",
+    "keyword": "语言覆盖"
+  },
+  {
+    "question": "换嵌入模型后为什么必须全量重建索引？",
+    "expected_file": "05_嵌入模型选型.txt",
+    "keyword": "向量空间互不相通"
+  },
+  {
+    "question": "重排使用的交叉编码器和召回阶段的双塔结构有什么区别？",
+    "expected_file": "06_重排器原理.txt",
+    "keyword": "交叉编码器"
+  },
+  {
+    "question": "为什么调优顺序一定是先看召回率再看精排？",
+    "expected_file": "06_重排器原理.txt",
+    "keyword": "重排无能为力"
+  },
+  {
+    "question": "混合检索时为什么不能把向量分数和 BM25 原始分数直接相加？",
+    "expected_file": "07_混合检索融合.txt",
+    "keyword": "无上界"
+  },
+  {
+    "question": "什么是倒数排名融合（RRF），它适合什么场景？",
+    "expected_file": "07_混合检索融合.txt",
+    "keyword": "RRF"
+  },
+  {
+    "question": "一个问答提示词至少应包含哪四部分？",
+    "expected_file": "08_提示词工程.txt",
+    "keyword": "角色与任务边界"
+  },
+  {
+    "question": "提示词里为什么必须写明材料中没有答案时怎么办？",
+    "expected_file": "08_提示词工程.txt",
+    "keyword": "不要推测"
+  },
+  {
+    "question": "幻觉的两类分别靠什么手段抑制？",
+    "expected_file": "09_幻觉抑制.txt",
+    "keyword": "错误归因"
+  },
+  {
+    "question": "为什么说拒答机制是性价比最高的一环？",
+    "expected_file": "09_幻觉抑制.txt",
+    "keyword": "空上下文"
+  },
+  {
+    "question": "多轮对话里为什么要在检索前做问题改写？",
+    "expected_file": "10_多轮对话改写.txt",
+    "keyword": "指代消解"
+  },
+  {
+    "question": "问题改写失败时的兜底做法是什么？",
+    "expected_file": "10_多轮对话改写.txt",
+    "keyword": "回落到原问题"
+  },
+  {
+    "question": "增量索引一般用什么方式判断文件是否被修改？",
+    "expected_file": "11_增量索引.txt",
+    "keyword": "内容哈希"
+  },
+  {
+    "question": "为什么增量检测不能依赖文件修改时间？",
+    "expected_file": "11_增量索引.txt",
+    "keyword": "修改时间并不可靠"
+  },
+  {
+    "question": "RAG 场景里为什么 Recall@k 比 Precision 更重要？",
+    "expected_file": "12_检索评测指标.txt",
+    "keyword": "漏掉正确文档是致命错误"
+  },
+  {
+    "question": "语料只有两三个块时，Recall@3 的数值为什么没有参考价值？",
+    "expected_file": "12_检索评测指标.txt",
+    "keyword": "天然是 100%"
+  },
+  {
+    "question": "HNSW 索引的主要优点和代价是什么？",
+    "expected_file": "13_向量数据库选型.txt",
+    "keyword": "HNSW"
+  },
+  {
+    "question": "单机嵌入式向量库在多进程写入时会有什么风险？",
+    "expected_file": "13_向量数据库选型.txt",
+    "keyword": "容易损坏"
+  },
+  {
+    "question": "先过滤再检索和先检索再过滤有什么区别？",
+    "expected_file": "14_元数据过滤.txt",
+    "keyword": "pre-filter"
+  },
+  {
+    "question": "为什么解析阶段就要把页码和章节写进块元数据？",
+    "expected_file": "14_元数据过滤.txt",
+    "keyword": "无从过滤"
+  },
+  {
+    "question": "流式输出优化的到底是什么？",
+    "expected_file": "15_流式输出.txt",
+    "keyword": "首 token 延迟"
+  },
+  {
+    "question": "流式输出为什么会让错误处理变复杂？",
+    "expected_file": "15_流式输出.txt",
+    "keyword": "中途出错就无法简单重试"
+  },
+  {
+    "question": "调用外部模型接口时，重试为什么要用指数退避加抖动？",
+    "expected_file": "16_并发与限流.txt",
+    "keyword": "雪崩"
+  },
+  {
+    "question": "哪些错误不应该重试？",
+    "expected_file": "16_并发与限流.txt",
+    "keyword": "不应重试"
+  },
+  {
+    "question": "RAG 的成本主要花在哪三处？",
+    "expected_file": "17_成本控制.txt",
+    "keyword": "嵌入、生成、重排"
+  },
+  {
+    "question": "为什么不要在上下文里塞整篇文档，而只塞命中的块？",
+    "expected_file": "17_成本控制.txt",
+    "keyword": "在噪声里找答案"
+  },
+  {
+    "question": "解析中文 TXT 时，正确的编码兜底做法是什么？",
+    "expected_file": "18_文档解析坑.txt",
+    "keyword": "已被耗尽的流"
+  },
+  {
+    "question": "双栏排版的 PDF 按行提取会出现什么问题？",
+    "expected_file": "18_文档解析坑.txt",
+    "keyword": "两栏内容交错拼接"
+  },
+  {
+    "question": "为什么先检索再在展示层隐藏，不如在检索层做权限过滤？",
+    "expected_file": "19_安全与权限.txt",
+    "keyword": "根本不进入候选集"
+  },
+  {
+    "question": "提示词注入攻击的常见形式是什么？",
+    "expected_file": "19_安全与权限.txt",
+    "keyword": "忽略上面的规则"
+  },
+  {
+    "question": "为什么核心逻辑必须能被单测覆盖？",
+    "expected_file": "20_工程化落地.txt",
+    "keyword": "不依赖模型即可测"
+  },
+  {
+    "question": "区分做过 demo 和做过系统的关键是什么？",
+    "expected_file": "20_工程化落地.txt",
+    "keyword": "别人能接手"
+  }
+]

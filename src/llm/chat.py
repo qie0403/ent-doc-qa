@@ -77,6 +77,8 @@ class ChatManager:
         enable_streaming: bool = True,
         enable_query_rewrite: bool = True,
         max_history_turns: int = 10,
+        answer_min_score: float = 0.0,
+        enable_citation_check: bool = False,
     ):
         """
         初始化对话管理器
@@ -88,6 +90,9 @@ class ChatManager:
             enable_streaming: 是否启用流式输出
             enable_query_rewrite: 是否启用问题改写
             max_history_turns: 最大历史轮数
+            answer_min_score: 拒答阈值。Top1 检索分数低于该值时直接拒答，
+                不调用大模型（默认 0.0 表示只对"完全没检索到内容"拒答）
+            enable_citation_check: 是否在生成后做一次幻觉/引用校验（多一次模型调用）
         """
         self.llm = llm
         self.retriever = retriever
@@ -95,6 +100,8 @@ class ChatManager:
         self.enable_streaming = enable_streaming
         self.enable_query_rewrite = enable_query_rewrite
         self.max_history_turns = max_history_turns
+        self.answer_min_score = answer_min_score
+        self.enable_citation_check = enable_citation_check
 
         # Prompt 工厂
         self.prompt_factory = PromptFactory()
@@ -103,7 +110,9 @@ class ChatManager:
             f"对话管理器初始化完成: "
             f"流式输出={enable_streaming}, "
             f"问题改写={enable_query_rewrite}, "
-            f"最大历史轮数={max_history_turns}"
+            f"最大历史轮数={max_history_turns}, "
+            f"拒答阈值={answer_min_score}, "
+            f"引用校验={enable_citation_check}"
         )
 
     def chat(
@@ -140,6 +149,32 @@ class ChatManager:
                 filter=filter,
             )
 
+            # 2.5 拒答判定：检索为空或 Top1 分数低于阈值时不调用模型，
+            #     直接给出"未找到"回答，避免空上下文下模型自由编造
+            refuse, refuse_reason, top1_score = self._should_refuse(retrieved_docs)
+            if refuse:
+                refusal = self._build_refusal_answer(refuse_reason, top1_score)
+                self.history.add_user_message(session_id, question)
+                self.history.add_assistant_message(session_id, refusal, {
+                    "refused": True,
+                    "refuse_reason": refuse_reason,
+                    "retrieval_stats": stats.__dict__,
+                })
+                return ChatResponse(
+                    answer=refusal,
+                    sources=[],
+                    retrieved_docs=retrieved_docs,
+                    session_id=session_id,
+                    latency_ms=(time.time() - start_time) * 1000,
+                    metadata={
+                        "retrieval_stats": stats.__dict__,
+                        "optimized_question": optimized_question,
+                        "refused": True,
+                        "refuse_reason": refuse_reason,
+                        "top1_score": top1_score,
+                    },
+                )
+
             # 3. 构建 Prompt
             context = self.prompt_factory.format_context(
                 [r.document for r in retrieved_docs]
@@ -154,6 +189,9 @@ class ChatManager:
 
             # 5. 解析引用来源
             sources = self._extract_sources(answer, retrieved_docs)
+
+            # 5.5 引用校验（可选）：检查答案是否被检索材料支持
+            citation_check = self._verify_answer(question, context, answer)
 
             # 6. 保存对话历史
             self.history.add_user_message(session_id, question)
@@ -174,6 +212,7 @@ class ChatManager:
                 metadata={
                     "retrieval_stats": stats.__dict__,
                     "optimized_question": optimized_question,
+                    "citation_check": citation_check,
                 },
             )
 
@@ -215,6 +254,34 @@ class ChatManager:
                 filter=filter,
             )
 
+            # 2.5 拒答判定（与非流式保持一致的口径）
+            refuse, refuse_reason, top1_score = self._should_refuse(retrieved_docs)
+            if refuse:
+                refusal = self._build_refusal_answer(refuse_reason, top1_score)
+                self.history.add_user_message(session_id, question)
+                self.history.add_assistant_message(session_id, refusal, {
+                    "refused": True,
+                    "refuse_reason": refuse_reason,
+                    "retrieval_stats": stats.__dict__,
+                })
+                for piece in self._chunk_text(refusal):
+                    yield piece, None
+                yield "", ChatResponse(
+                    answer=refusal,
+                    sources=[],
+                    retrieved_docs=retrieved_docs,
+                    session_id=session_id,
+                    latency_ms=(time.time() - start_time) * 1000,
+                    metadata={
+                        "retrieval_stats": stats.__dict__,
+                        "optimized_question": optimized_question,
+                        "refused": True,
+                        "refuse_reason": refuse_reason,
+                        "top1_score": top1_score,
+                    },
+                )
+                return
+
             # 3. 构建 Prompt
             context = self.prompt_factory.format_context(
                 [r.document for r in retrieved_docs]
@@ -232,6 +299,9 @@ class ChatManager:
 
             # 5. 解析引用来源
             sources = self._extract_sources(full_answer, retrieved_docs)
+
+            # 5.5 引用校验（可选）
+            citation_check = self._verify_answer(question, context, full_answer)
 
             # 6. 保存对话历史
             self.history.add_user_message(session_id, question)
@@ -253,6 +323,7 @@ class ChatManager:
                 metadata={
                     "retrieval_stats": stats.__dict__,
                     "optimized_question": optimized_question,
+                    "citation_check": citation_check,
                 },
             )
 
@@ -346,6 +417,99 @@ class ChatManager:
         # 调用 LLM
         response = self.llm.invoke(messages)
         return response.content
+
+    def _should_refuse(self, retrieved_docs: List[RetrievalResult]) -> Tuple[bool, str, float]:
+        """
+        判断是否应当拒答
+
+        判定口径（两条，先到先触发）：
+            1. 检索结果为空（no_hits）—— 没有任何材料支撑，模型只能编；
+            2. Top1 检索分数低于 answer_min_score（low_score）—— 有结果但不够相关。
+
+        注意：默认 answer_min_score=0.0，此时只有"检索完全为空"才拒答，
+        因此不改变既有行为的语义，只是把"空上下文下编造"这条路径堵住。
+
+        Returns:
+            (是否拒答, 拒答原因, Top1 分数)
+        """
+        if not retrieved_docs:
+            return True, "no_hits", 0.0
+
+        top1_score = float(getattr(retrieved_docs[0], "score", 0.0) or 0.0)
+        if top1_score < self.answer_min_score:
+            return True, "low_score", top1_score
+
+        return False, "", top1_score
+
+    def _build_refusal_answer(self, reason: str, top1_score: float) -> str:
+        """构造拒答文案：明确说明未找到，并给出可执行的下一步"""
+        if reason == "low_score":
+            head = (
+                f"未在知识库中找到足够相关的内容（最高相关度 {top1_score:.2f}，"
+                f"低于当前阈值 {self.answer_min_score:.2f}），因此不作答以免给出错误信息。"
+            )
+        else:
+            head = "未在知识库中检索到与该问题相关的内容，因此不作答以免给出错误信息。"
+        return (
+            f"{head}\n\n"
+            "建议尝试：\n"
+            "1. 换一种说法或补充关键信息（文档名、章节、具体术语）；\n"
+            "2. 确认相关文档已经上传并完成索引；\n"
+            "3. 如果是新主题，先补充材料再提问。"
+        )
+
+    def _verify_answer(self, question: str, context: str, answer: str) -> Dict[str, Any]:
+        """
+        引用/幻觉校验：检查回答是否被检索到的材料支持
+
+        设计要点：
+            - 默认关闭（enable_citation_check=False），因为每次问答会多一次模型调用；
+            - 结果只放进 metadata 供上层展示，不擅自修改回答内容；
+            - 任何异常都降级为 {"enabled": True, "error": ...}，绝不打断主流程。
+
+        Returns:
+            校验结果字典
+        """
+        if not self.enable_citation_check:
+            return {"enabled": False}
+
+        try:
+            prompt = self.prompt_factory.get_hallucination_check_prompt()
+            # 该校验用的是 PromptTemplate（字符串模板），不是 ChatPromptTemplate
+            prompt_text = prompt.format(context=context, answer=answer)
+            messages = [HumanMessage(content=prompt_text)]
+            raw = self.llm.invoke(messages).content or ""
+
+            # 模型可能返回带代码块围栏的 JSON，先剥掉再解析
+            cleaned = raw.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.strip("`")
+                if cleaned.lower().startswith("json"):
+                    cleaned = cleaned[4:]
+            cleaned = cleaned.strip()
+
+            import json
+            try:
+                parsed = json.loads(cleaned)
+                return {
+                    "enabled": True,
+                    "is_hallucination": bool(parsed.get("is_hallucination", False)),
+                    "confidence": parsed.get("confidence"),
+                    "issues": parsed.get("issues", []),
+                    "suggestion": parsed.get("suggestion", ""),
+                }
+            except json.JSONDecodeError:
+                # 解析失败不算失败，保留原文便于人工查看
+                return {"enabled": True, "raw": raw[:500], "parse_error": "模型未返回合法 JSON"}
+        except Exception as e:
+            logger.warning(f"引用校验失败（不影响回答）: {str(e)}")
+            return {"enabled": True, "error": str(e)}
+
+    @staticmethod
+    def _chunk_text(text: str, size: int = 12) -> Generator[str, None, None]:
+        """把拒答文案切成小片，让流式接口在拒答时也有输出节奏"""
+        for i in range(0, len(text), size):
+            yield text[i : i + size]
 
     def _stream_answer(
         self,
