@@ -170,18 +170,16 @@ class BGEReranker(Reranker):
         """
         降级重排（保持原始顺序）
 
-        Args:
-            documents: 文档列表
-            top_n: 返回数量
-
-        Returns:
-            重排结果列表
+        为什么降级时不做"词法重排"：
+            `scripts/ab_rerank.py` 实测词法重排在已饱和的召回上**反而更差**
+            （256 分块下 Recall@1 97.5% → 85.0%），因为 BM25 带 IDF 权重，
+            而词法覆盖度打分没有。既如此，降级时保持原顺序更安全。
         """
         results = []
         for rank, doc in enumerate(documents[:top_n], start=1):
             results.append(RerankResult(
                 document=doc,
-                score=1.0 - rank * 0.01,  # 伪分数
+                score=1.0 - rank * 0.01,  # 伪分数：只表示顺序，不代表相关性
                 original_rank=rank,
                 new_rank=rank,
             ))
@@ -288,7 +286,7 @@ class CohereReranker(Reranker):
         documents: List[Document],
         top_n: int,
     ) -> List[RerankResult]:
-        """降级重排"""
+        """降级重排：保持原始顺序（理由同 BGEReranker._fallback_rerank）"""
         results = []
         for rank, doc in enumerate(documents[:top_n], start=1):
             results.append(RerankResult(
